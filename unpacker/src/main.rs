@@ -6,7 +6,8 @@ enum SRecordType {
     /// Generally S-Record types appear to be [0-9]. Type-A may be a proprietary addition made by HP
     A,
 
-    /// Vendor specific ascii text comment
+    /// Vendor specific ascii text comment, in this case used once in the seventh record with a 
+    /// data-field of `reflash`
     Zero,
 
     /// This type instructs the flash programmer to store the record data to a specified section in 
