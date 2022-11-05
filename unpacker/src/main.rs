@@ -546,13 +546,18 @@ fn decompress_bitmap(compress_type: (u8, &Command), blob: &Vec<u8>, seed_row: &V
     }
 }
 
-fn print_record(record: &Vec<SRecord>) -> Vec<u8> {
+fn print_binary_record(record: &Vec<SRecord>) -> Vec<u8> {
     // For now, printing binary part only
     record
         .iter()
         .skip_while(|rec| rec.header != 0x30)
         .filter(|rec| matches!(rec.t_type, SRecordType::Three))
         .map(|rec| rec.data.clone())
+        .collect::<Vec<_>>()
+        .concat()
+        // Removing unused OOB data
+        .chunks(0x840)
+        .map(|chunk| &chunk[..0x800])
         .collect::<Vec<_>>()
         .concat()
 }
@@ -593,11 +598,9 @@ fn main() {
     let blob = std::fs::read("./firmware_blob.bin").unwrap();
     // decompress(&blob);
     let raw = parse_pjl(&blob);
-    // std::fs::write("./bin1_struct", format!("{:#X?}", &raw)).unwrap();
     let bm = extract_bitmap(&raw);
-    // std::fs::write("./bin1", &bm).unwrap();
+    // std::fs::write("./srecord1", &bm).unwrap();
     let srecord = parse_s_records(&bm);
-    // std::fs::write("./srecord1_struct", format!("{:#X?}", &srecord)).unwrap();
-    std::fs::write("./srecord1", print_record(&srecord)).unwrap();
+    std::fs::write("./bin1", print_binary_record(&srecord)).unwrap();
     // parse_s_records(&bm);
 }
