@@ -185,7 +185,6 @@ struct PJLCommand {
 }
 
 fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
-    let mut compression_state = Param::compression(0);
     let mut result = vec![];
     let mut index = 0;
     let find_next = |id: &[u8]| id.iter().position(|&c| c == 0x1B).unwrap_or(id.len());
@@ -247,11 +246,13 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
                         let len = rest.len();
                         match rest[len - 1] {
                             b'm' => {
-                                println!("{:X?}", &rest[..len - 1]);
-                                let compression_level = hex_to_ascii(&rest[..len - 1], 10).0;
-                                compression_state = Param::compression(
-                                    compression_level.try_into().expect("u8 compression size"),
-                                );
+                                // println!("{:X?}", &rest[..len - 1]);
+                                if len > 0 {
+                                    let compression_level = hex_to_ascii(&rest[..len - 1], 10).0;
+                                    params.push(Param::compression(
+                                        compression_level.try_into().expect("u8 compression size"),
+                                    ));
+                                }
                             }
                             b'0'..=b'9' => {
                                 let length = hex_to_ascii(rest, 10).0;
@@ -279,30 +280,13 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
                             {
                                 match method {
                                     b'V' | b'W' => {
-                                        if let Param::compression(x) = &compression_state {
-                                            params.push(compression_state.clone());
-                                            match x {
-                                                0 | 2 | 3 => {
-                                                    let stack = &extra[..read_length];
-                                                    index += read_length;
-                                                    params.push(Param::data(stack.to_vec()));
-                                                    PJLCommand {
-                                                        command,
-                                                        params,
-                                                        offset,
-                                                    }
-                                                }
-                                                _ => {
-                                                    println!(
-                                                    "Cannot parse compression type at index {:X}",
-                                                    index,
-                                                    );
-                                                    break;
-                                                }
-                                            }
-                                        } else {
-                                            println!("Compression undefined at index {:X}", index);
-                                            break;
+                                        let stack = &extra[..read_length];
+                                        index += read_length;
+                                        params.push(Param::data(stack.to_vec()));
+                                        PJLCommand {
+                                            command,
+                                            params,
+                                            offset,
                                         }
                                     }
                                     _ => {
@@ -334,7 +318,7 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
                         }
                     }
                 }
-                _ => panic!(),
+                _ => panic!("Unimplemented command"),
             }
         };
         result.push(parse);
@@ -343,32 +327,40 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
     result
 }
 
-fn decompress_bitmap(
-    compress_type: (u8, &Command),
-    blob: &Vec<u8>,
-    seed_row: &mut Vec<u8>,
-) -> Vec<u8> {
-    println!("Decompressing type {:X}", compress_type.0);
+fn decompress_bitmap(compress_type: (u8, &Command), blob: &Vec<u8>, seed_row: &Vec<u8>) -> Vec<u8> {
+    println!("INFO: Decompressing type {:X}", compress_type.0);
     match compress_type {
-        (0, _) => blob.to_vec(),
+        (0, _) => {
+            let mut expand = blob.to_vec();
+            if matches!(compress_type.1, Command::AsteriskB(b'V')) && blob.len() != 16384 {
+                expand.resize(16384, 0)
+            }
+            expand
+        }
         (2, _) => {
             let mut index = 0;
             let mut expand = vec![];
             loop {
                 if index >= blob.len() {
+                    assert!(index == blob.len());
                     break;
                 }
                 let control = blob[index] as i8;
-                println!("Found control {:X} at offset {:X}", control, index);
+                // println!("Found control {:X} at offset {:X}", control, index);
                 index += 1;
-                match control as i8 {
-                    0..=127 => {
+                match control {
+                    0 => {
+                        let next = blob[index];
+                        index += 1;
+                        expand.push(next);
+                    }
+                    1..=127 => {
                         let mut literal = blob[index..index + control as usize + 1].to_vec();
                         index += literal.len();
-                        expand.append(&mut literal)
+                        expand.append(&mut literal);
                     }
                     -128 => {
-                        println!("Found 1 Do nothing pattern at {}", index);
+                        println!("Found Do nothing pattern at {}", index);
                         // Do nothing
                     }
                     -127..=-1 => {
@@ -378,16 +370,26 @@ fn decompress_bitmap(
                     }
                 }
             }
+            // the command Transfer Raster Data by Plane (‘V’) is zero-filled
+            // if the amount of bytes after decompression is less than the raster width,
+            // while the Transfer Raster Data by Row (‘W’) is not zero-filled
+            if matches!(compress_type.1, Command::AsteriskB(b'V')) && expand.len() != 16384 {
+                expand.resize(16384, 0);
+            }
             expand
         }
         (3, _) => {
             let mut index = 0;
+            let mut position = 0;
+            let mut seed_row = seed_row.to_vec();
+            assert!(seed_row.len() == 16384);
             loop {
                 if index >= blob.len() {
+                    assert!(index == blob.len());
                     break;
                 }
                 let control = blob[index];
-                println!("Found control {:X} at offset {:X}", control, index);
+                // println!("Found control {:X} at offset {:X}", control, index);
                 index += 1;
                 let replace_count = 1 + ((control >> 5) & 0b111) as usize;
                 let mut replace_offset = (control & 0b11111) as usize;
@@ -395,19 +397,21 @@ fn decompress_bitmap(
                     loop {
                         let next_byte = blob[index] as usize;
                         index += 1;
-                        replace_offset = (replace_offset << 8) & next_byte;
+                        replace_offset += next_byte;
                         if next_byte != 0xFF {
                             break;
                         }
                     }
                 }
+                position += replace_offset;
                 let copy_data = &blob[index..index + replace_count];
                 index += replace_count;
                 for i in 0..replace_count {
-                    seed_row[replace_offset + i] = copy_data[i];
+                    seed_row[position + i] = copy_data[i];
                 }
+                position += replace_count;
             }
-            seed_row.clone()
+            seed_row
         }
         _ => {
             println!("Warning: Could not decompress. Leaving as-is.");
@@ -433,13 +437,15 @@ fn extract_bitmap(pjls: &Vec<PJLCommand>) -> Vec<u8> {
         println!("Decompressing at {:X}", part.offset);
         for param in part.params.iter() {
             match param {
-                Param::compression(level) => c_type = *level,
-                Param::data(x) => result.append(&mut decompress_bitmap(
-                    (c_type, &part.command),
-                    x,
-                    &mut seed_row,
-                )),
-                _ => (),
+                Param::compression(level) => {
+                    c_type = *level;
+                    println!("Compression switched to {}", c_type);
+                }
+                Param::data(x) => {
+                    seed_row = decompress_bitmap((c_type, &part.command), x, &seed_row);
+                    result.append(&mut seed_row.to_vec());
+                }
+                _ => {}
             }
         }
     }
@@ -450,7 +456,7 @@ fn main() {
     let blob = std::fs::read("./firmware_blob.bin").unwrap();
     // decompress(&blob);
     let raw = parse_pjl(&blob);
-    std::fs::write("./bin1_struct", format!("{:#X?}", &raw)).unwrap();
+    // std::fs::write("./bin1_struct", format!("{:#X?}", &raw)).unwrap();
     let bm = extract_bitmap(&raw);
     std::fs::write("./bin1", &bm).unwrap();
     // parse_s_records(&bm);
