@@ -157,7 +157,6 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
         };
         match record_cat {
             0x53 => {
-                println!("INFO: Matched ASCII S-record");
                 // <ASCII Text>
                 // S                                                    Header
                 // 3                                                    Type
@@ -208,7 +207,6 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 index += (len * 2) + 5;
             }
             0x30..=0x3F => {
-                println!("INFO: Matched binary S-record");
                 // <Hexdump>
                 // 33                                                   Header+Type
                 // 05                                                   Length
@@ -251,9 +249,9 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 // Skip until new-line
                 let endl = find_nl(&bytes[index..]);
                 println!(
-                    "Skipping {:X} record: {:X?}",
+                    "Skipping {} record: `{}`",
                     record_cat,
-                    &bytes[index..index + endl]
+                    String::from_utf8(bytes[index..index + endl].to_vec()).unwrap(),
                 );
                 index += endl + 1;
             }
@@ -552,7 +550,7 @@ fn print_record(record: &Vec<SRecord>) -> Vec<u8> {
     // For now, printing binary part only
     record
         .iter()
-        .skip_while(|rec| !matches!(rec.header, 0x30..=0x39))
+        .skip_while(|rec| rec.header != 0x30)
         .filter(|rec| matches!(rec.t_type, SRecordType::Three))
         .map(|rec| rec.data.clone())
         .collect::<Vec<_>>()
