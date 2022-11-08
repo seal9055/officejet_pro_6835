@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<man:Manifest xmlns:man="http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24" 
+xmlns:map="http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27" 
+xmlns:faxcfgdyn="http://www.hp.com/schemas/imaging/con/ledm/faxconfigdyn/2009/03/03"
+xmlns:faxcfgcap="http://www.hp.com/schemas/imaging/con/ledm/faxconfigcap/2009/03/03"
+xmlns:fpbcap="http://www.hp.com/schemas/imaging/con/ledm/faxphonebookcap/2008/03/17"
+xmlns:fpbdyn="http://www.hp.com/schemas/imaging/con/ledm/faxphonebookdyn/2008/03/17"
+xmlns:faxblklistcap="http://www.hp.com/schemas/imaging/con/ledm/faxblklistcap/2008/04/03"
+xmlns:faxblklistdyn="http://www.hp.com/schemas/imaging/con/ledm/faxblklistdyn/2008/04/03" 
+xmlns:dd="http://www.hp.com/schemas/imaging/con/dictionaries/1.0/" 
+xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.hp.com/schemas/imaging/con/ledm/faxconfigdyn/2009/03/03 ../schemas/FaxConfigDyn.xsd
+	http://www.hp.com/schemas/imaging/con/ledm/faxconfigcap/2009/03/03 ../schemas/FaxConfigCap.xsd
+	http://www.hp.com/schemas/imaging/con/ledm/faxphonebookcap/2008/03/17 ../schemas/FaxPhoneBookCap.xsd
+	http://www.hp.com/schemas/imaging/con/ledm/faxphonebookdyn/2008/03/17 ../schemas/FaxPhoneBookDyn.xsd
+	http://www.hp.com/schemas/imaging/con/ledm/faxblklistcap/2008/04/03 ../schemas/FaxBlockListCap.xsd	
+	http://www.hp.com/schemas/imaging/con/ledm/faxblklistdyn/2008/04/03 ../schemas/FaxBlockListDyn.xsd
+	http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24 ../schemas/Manifest.xsd
+        http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27 ../schemas/ResourceMap.xsd 
+        http://www.hp.com/schemas/imaging/con/dictionaries/1.0/ ../schemas/dd/DataDictionaryMasterLEDM.xsd">
+	<!--  this is the manifest schema version, not the eFCL version number -->
+	<dd:Version>
+		<dd:Revision>SVN-IPG-LEDM.29</dd:Revision>
+		<dd:Date>2011-10-18</dd:Date>	
+	</dd:Version>
+	<man:InterfaceNamespaces>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxconfigdyn/2009/03/03</man:InterfaceNamespace>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxconfigcap/2009/03/03</man:InterfaceNamespace>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxphonebookcap/2008/03/17</man:InterfaceNamespace>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxphonebookdyn/2008/03/17</man:InterfaceNamespace>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxblklistcap/2008/04/03</man:InterfaceNamespace>
+		<man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/faxblklistdyn/2008/04/03</man:InterfaceNamespace>
+	</man:InterfaceNamespaces>
+	<map:ResourceMap>
+		<!-- declare the root URL for this interface -->
+		<map:ResourceLink>
+			<dd:ResourceURI>/eFCL</dd:ResourceURI>
+			<map:Base>Root</map:Base>
+		</map:ResourceLink>
+		<!--  Fax Config -->
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxConfigCap.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxConfigCap</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<faxcfgcap:FaxConfigCap xsi:nil="true"/>
+			</map:XmlElement>
+		</map:ResourceNode>
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxConfigDyn.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxConfigDyn</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+				<map:Method>
+					<map:Verb>Put</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<faxcfgdyn:FaxConfigDyn xsi:nil="true"/>
+			</map:XmlElement>
+		</map:ResourceNode>
+		<!--  Fax Phonebook -->
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxPhoneBookCap.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxPhoneBookCap</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<fpbcap:FaxPhoneBookCap xsi:nil="true"/>
+			</map:XmlElement>
+		</map:ResourceNode>
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxPhoneBookDyn.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxPhoneBookDyn</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+				<map:Method>
+					<map:Verb>Put</map:Verb>
+				</map:Method>
+				<map:Method>
+					<map:Verb>Post</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<fpbdyn:FaxPhoneBookDyn xsi:nil="true"/>
+			</map:XmlElement>
+			<map:ResourceMap>
+				<map:ResourceNode>
+					<map:ResourceLink>
+						<dd:ResourceURI>/{id}</dd:ResourceURI>
+					</map:ResourceLink>
+					<map:ResourceType>
+					<faxcfgdyn:FaxResourceType>FaxPhoneBookEntryID</faxcfgdyn:FaxResourceType>
+					</map:ResourceType>
+					<map:Methods>
+						<map:Method>
+							<map:Verb>Get</map:Verb>
+						</map:Method>
+						<map:Method>
+							<map:Verb>Put</map:Verb>
+						</map:Method>
+						<map:Method>
+							<map:Verb>Delete</map:Verb>
+						</map:Method>
+					</map:Methods>
+					<map:XmlElement>
+						<fpbdyn:FaxPhoneBookDyn xsi:nil="true"/>
+					</map:XmlElement>
+				</map:ResourceNode>
+			</map:ResourceMap>
+		</map:ResourceNode>
+		<!--  Fax BlockList-->
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxBlockListCap.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxBlockListCap</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<faxblklistcap:FaxBlockListCap xsi:nil="true"/>
+			</map:XmlElement>
+		</map:ResourceNode>
+		<map:ResourceNode>
+			<map:ResourceLink>
+				<dd:ResourceURI>/FaxBlockListDyn.xml</dd:ResourceURI>
+			</map:ResourceLink>
+			<map:ResourceType>
+				<faxcfgdyn:FaxResourceType>hpLedmFaxBlockListDyn</faxcfgdyn:FaxResourceType>
+			</map:ResourceType>
+			<map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+				<map:Method>
+					<map:Verb>Put</map:Verb>
+				</map:Method>
+				<map:Method>
+					<map:Verb>Post</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<faxblklistdyn:FaxBlockListDyn xsi:nil="true"/>
+			</map:XmlElement>
+			<map:ResourceMap>
+				<map:ResourceNode>
+					<map:ResourceLink>
+						<dd:ResourceURI>/{id}</dd:ResourceURI>
+					</map:ResourceLink>
+					<map:ResourceType>
+					<faxcfgdyn:FaxResourceType>FaxBlockListEntryID</faxcfgdyn:FaxResourceType>
+					</map:ResourceType>
+					<map:Methods>
+						<map:Method>
+							<map:Verb>Delete</map:Verb>
+						</map:Method>
+						<map:Method>
+							<map:Verb>Get</map:Verb>
+						</map:Method>
+					</map:Methods>
+					<map:XmlElement>
+					<faxblklistdyn:FaxBlockListDyn xsi:nil="true"/>
+					</map:XmlElement>
+				</map:ResourceNode>
+			</map:ResourceMap>
+		</map:ResourceNode>
+	</map:ResourceMap>
+</man:Manifest>
+<?xml version="1.0" encoding="UTF-8"?>
+<man:Manifest xmlns:man="http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24" xmlns:map="http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27" xmlns:fpscap="http://www.hp.com/schemas/imaging/con/ledm/printtofaxcap/2008/11/24" xmlns:fpsdyn="http://www.hp.com/schemas/imaging/con/ledm/printtofaxdyn/2008/11/24" xmlns:dd="http://www.hp.com/schemas/imaging/con/dictionaries/1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24 ../../schemas/Manifest.xsd http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27 ../../schemas/ResourceMap.xsd http://www.hp.com/schemas/imaging/con/dictionaries/1.0/ ../../schemas/dd/DataDictionaryMasterLEDM.xsd http://www.hp.com/schemas/imaging/con/ledm/printtofaxcap/2008/11/24 ../schemas/FaxPCSendCap.xsd http://www.hp.com/schemas/imaging/con/ledm/printtofaxdyn/2008/11/24 ../schemas/FaxPCSendDyn.xsd">
+    <dd:Version>
+        <dd:Revision>SVN.2568</dd:Revision>
+    </dd:Version>
+    <man:InterfaceNamespaces>
+        <man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/printtofaxcap/2008/11/24</man:InterfaceNamespace>
+        <man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/printtofaxdyn/2008/11/24</man:InterfaceNamespace>
+    </man:InterfaceNamespaces>
+    <map:ResourceMap>
+        <map:ResourceLink>
+            <dd:ResourceURI>/FaxPCSend</dd:ResourceURI>
+            <map:Base>Root</map:Base>
+        </map:ResourceLink>
+        <map:ResourceNode>
+            <map:ResourceLink>
+                <dd:ResourceURI>/FaxPCSendCap.xml</dd:ResourceURI>
+            </map:ResourceLink>
+            <map:ResourceType><fpscap:FaxPCSendResourceType>FaxPCSendCap</fpscap:FaxPCSendResourceType></map:ResourceType>
+            <map:Methods>
+                <map:Method>
+                    <map:Verb>Get</map:Verb>
+                </map:Method>
+            </map:Methods>
+            <map:XmlElement>
+                <fpscap:FaxPCSendCap xsi:nil="true"/>
+            </map:XmlElement>
+        </map:ResourceNode>
+        <map:ResourceNode>
+            <map:ResourceLink>
+                <dd:ResourceURI>/Job</dd:ResourceURI>
+            </map:ResourceLink>
+            <map:ResourceType><fpsdyn:FaxPCSendResourceType>FaxPCSendConfig</fpsdyn:FaxPCSendResourceType></map:ResourceType>
+            <map:Methods>
+                <map:Method>
+                    <map:Verb>Post</map:Verb>
+                </map:Method>
+            </map:Methods>
+            <map:XmlElement>
+                <fpsdyn:FaxPCSendConfig xsi:nil="true"/>
+            </map:XmlElement>
+        </map:ResourceNode>
+        <map:ResourceNode>
+            <map:ResourceLink>
+                <dd:ResourceURI>/PageConfig/{fpsdyn:page-num}</dd:ResourceURI>
+                <fpsdyn:page-num>xs:positiveInteger</fpsdyn:page-num>
+            </map:ResourceLink>
+            <map:ResourceType><fpsdyn:FaxPCSendResourceType>PageConfig</fpsdyn:FaxPCSendResourceType></map:ResourceType>
+            <map:Methods>
+                <map:Method>
+                    <map:Verb>Post</map:Verb>
+                </map:Method>
+            </map:Methods>
+            <map:XmlElement>
+                <fpsdyn:PageConfig xsi:nil="true"/>
+            </map:XmlElement>
+        </map:ResourceNode>
+        <map:ResourceNode>
+            <map:ResourceLink>
+                <dd:ResourceURI>/PageImage/{fpsdyn:page-num}</dd:ResourceURI>
+                <fpsdyn:page-num>xs:positiveInteger</fpsdyn:page-num>
+            </map:ResourceLink>
+            <map:ResourceType><fpsdyn:FaxPCSendResourceType>ImageData</fpsdyn:FaxPCSendResourceType></map:ResourceType>
+            <map:Methods>
+                <map:Method>
+                    <map:Verb>Post</map:Verb>
+                </map:Method>
+            </map:Methods>
+            <map:IanaTypes>
+                <map:IanaType>application/octet-stream</map:IanaType>
+            </map:IanaTypes>
+        </map:ResourceNode>
+    </map:ResourceMap>
+</man:Manifest>
+   ! x
+«

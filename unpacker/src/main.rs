@@ -41,10 +41,6 @@ struct SRecord {
     checksum: u8,
 }
 
-struct FRecord {
-    len: usize,
-}
-
 /// Converts a sequence of bytes to a number by putting together the ascii value of each individual
 /// byte to form a number with a given base
 fn hex_to_ascii(bytes: &[u8], base: usize) -> (usize, usize) {
@@ -71,39 +67,7 @@ fn hex_to_ascii(bytes: &[u8], base: usize) -> (usize, usize) {
     (ret, index_advance)
 }
 
-/// Finds all the sections in the binary, and puts them together, removing the section meta-data, so
-/// we are left with a binary blob that we can then do further work on
-fn combine_data(bytes: &[u8]) -> Vec<u8> {
-    let mut index: usize = 0;
-    let mut combined_data: Vec<u8> = Vec::new();
-
-    loop {
-        // Check the first few bytes to be `<ESC>*b`
-        if bytes[index] == 0x1b && bytes[index + 1] == 0x2a && bytes[index + 2] == 0x62 {
-            // Check if `m` appears
-            if bytes[index + 4] == 0x6d {
-                index += 2;
-            } else if bytes[index + 6] == 0x6d {
-                index += 4;
-            }
-
-            let (section_size, index_advance) = hex_to_ascii(&bytes[index + 3..index + 3 + 10], 10);
-            index += index_advance + 3;
-            combined_data.extend_from_slice(&bytes[index..index + section_size]);
-            index += section_size;
-        } else {
-            println!(
-                "{:X}: bytes[index] = {:X}, bytes[index+1] = {:X}",
-                index,
-                bytes[index],
-                bytes[index + 1]
-            );
-            break;
-        }
-    }
-    combined_data
-}
-
+/// Convert `size` `bytes` from a sequence of bytes to a big endian number
 fn bytes_to_int_be(bytes: &[u8], size: usize) -> usize {
     let mut result = 0usize;
     let mut count = 0;
@@ -117,6 +81,7 @@ fn bytes_to_int_be(bytes: &[u8], size: usize) -> usize {
     result
 }
 
+/// Convert `size` `bytes` from a sequence of bytes to a little endian number
 fn bytes_to_int_le(bytes: &[u8], size: usize) -> usize {
     let mut result = 0usize;
     let mut count = 0;
@@ -144,18 +109,21 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
     // bits of flag-byte correspond to next 8 bytes
     //   eg. 0xFB = 0b11111011 -> First 2 bytes are literals (11), and then comes a 2 byte token (0)
 
-    // TODO-2 Check checksum for validity of parsed S-record
-
     loop {
-        // Check if record starts with `S`
         let record_cat = bytes[index];
+
+        // Closure to find the next newline within sequence of bytes
         let find_nl = |id: &[u8]| id.iter().position(|&c| c == b'\n').unwrap_or(id.len());
+
+        // Closure to verify the checksums of records
         let verify = |calc: &[u8], len: u8, checksum: u8| {
             let calc_add = calc.iter().fold(len as u16, |acc, &ele| acc + ele as u16);
             let calc_mask_comp = (calc_add & 0xFF) as u8 ^ 0xFF;
             assert!(checksum == calc_mask_comp);
         };
+
         match record_cat {
+            // Check if record starts with `S` and is thus an S-Record
             0x53 => {
                 // <ASCII Text>
                 // S                                                    Header
@@ -164,6 +132,10 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA     Data
                 // 28                                                   Checksum
                 // `\n`                                                 Newline
+
+
+                // Parse out length field from the Record
+                let (len, _) = hex_to_ascii(&bytes[index + 2..index + 4], 16);
 
                 // Parse out type of this record
                 let t_type = match bytes[index + 1] {
@@ -175,17 +147,20 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 };
                 let raw_type = bytes[index + 1] - 0x30;
 
-                let (len, _) = hex_to_ascii(&bytes[index + 2..index + 4], 16);
-
+                // Extract data fields as ascii instead of hex
                 let ascii_byte_start = index + 4;
                 let ascii_bytes = bytes[ascii_byte_start..ascii_byte_start + (len * 2)].chunks(2);
                 let mut data = vec![];
                 for ascii_byte in ascii_bytes {
                     data.push(hex_to_ascii(ascii_byte, 16).0 as u8);
                 }
+
+                // Verify checksum for the data
                 assert!(data.len() == len);
                 let checksum = data.pop().unwrap();
                 verify(&data, len as u8, checksum);
+
+                // Parse out addresses from S-Records
                 let address_size = match raw_type {
                     0 | 1 | 5 | 9 => 2,
                     2 | 6 | 8 => 3,
@@ -206,6 +181,7 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 // Increment index by length*2 + new-line byte (1) + Header bytes (4)
                 index += (len * 2) + 5;
             }
+            // Binary S-Record instead of Ascii S-Record
             0x30..=0x3F => {
                 // <Hexdump>
                 // 33                                                   Header+Type
@@ -245,6 +221,7 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 // length + new-line byte (1) + length byte (1)
                 index += len + 2;
             }
+            // Useless data, just skip past it until next record is found
             b'F' | b'P' => {
                 // Skip until new-line
                 let endl = find_nl(&bytes[index..]);
@@ -255,6 +232,7 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
                 );
                 index += endl + 1;
             }
+            // Not a valid record type
             _ => {
                 println!(
                     "{:X}: type = {:X}, bytes[index] = 0x{:X}, bytes[index+1] = 0x{:X}",
@@ -270,21 +248,6 @@ fn parse_s_records(bytes: &[u8]) -> Vec<SRecord> {
     records
 }
 
-/// Decompress the given bytes that correspond to HP printer-firmware
-fn decompress(blob: &Vec<u8>) {
-    let combined_data = combine_data(&blob[0x7e..]);
-    println!(
-        "Successfully combined data. Size: 0x{:X}",
-        combined_data.len()
-    );
-
-    std::fs::write("./bin1", &combined_data).unwrap();
-
-    let records = parse_s_records(&combined_data[0x0..0x44afa]);
-    println!("Successfully parsed {:X} records", records.len());
-    println!("{:#X?}", records);
-}
-
 #[derive(Clone, Debug)]
 enum Param {
     compression(u8),
@@ -296,11 +259,16 @@ enum Param {
 
 #[derive(Debug)]
 enum Command {
-    // Start of the PJL
+    /// Start of the PJL
     UEL,
-    // Reset the printer
+
+    /// Reset the printer
     E,
+
+    /// Initialize bitmap
     AsteriskB(u8),
+
+    /// Initialize the dictionary for the sliding window
     AsteriskR(u8),
 }
 
@@ -311,13 +279,18 @@ struct PJLCommand {
     offset: usize,
 }
 
+/// Finds all the sections in the binary, and puts them together, removing the section meta-data, so
+/// we are left with a binary blob that we can then do further work on
 fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
     let mut result = vec![];
     let mut index = 0;
+
+    // Closure to find next newline in byte-array
     let find_next = |id: &[u8]| id.iter().position(|&c| c == 0x1B).unwrap_or(id.len());
+
     loop {
         let offset = index;
-        println!("Go to index {:X}", index);
+        //println!("Go to index {:X}", index);
         // First element in command is <ESC>
         if index >= blob.len() {
             println!("Finished");
@@ -328,7 +301,7 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
             break;
         }
         index += 1;
-        let parse = if blob[index] == b'%' {
+        let parse: PJLCommand = if blob[index] == b'%' {
             if &blob[index..index + 8] == b"%-12345X" {
                 let endl = find_next(&blob[index..]);
                 let msg = String::from_utf8(blob[index..index + endl].to_vec())
@@ -594,13 +567,39 @@ fn extract_bitmap(pjls: &Vec<PJLCommand>) -> Vec<u8> {
     result
 }
 
+struct Header {
+    magic: u32,
+    header_size: u32,
+    page_size: u32,
+    bmp_size: u32,
+    load_addr: u32,
+    load_size: u32,
+    exec_addr: u32,
+}
+
+fn parse_headers(srecords: &[u8]) -> Header {
+    Header {
+        magic: bytes_to_int_be(&srecords[0x0..0x4], 4) as u32,
+        header_size: bytes_to_int_be(&srecords[0x8..0xb], 4) as u32,
+        page_size: bytes_to_int_be(&srecords[0x10..0x14], 4) as u32,
+        bmp_size: bytes_to_int_be(&srecords[0x1c..0x1f], 4) as u32,
+        load_addr: bytes_to_int_be(&srecords[0x30..0x34], 4) as u32,
+        load_size: bytes_to_int_be(&srecords[0x34..0x38], 4) as u32,
+        exec_addr: bytes_to_int_be(&srecords[0x3c..0x3f], 4) as u32,
+    }
+}
+
 fn main() {
     let blob = std::fs::read("./firmware_blob.bin").unwrap();
-    // decompress(&blob);
     let raw = parse_pjl(&blob);
     let bm = extract_bitmap(&raw);
-    // std::fs::write("./srecord1", &bm).unwrap();
     let srecord = parse_s_records(&bm);
+
+    let headers = parse_headers(&srecord);
+
     std::fs::write("./bin1", print_binary_record(&srecord)).unwrap();
+
+    // std::fs::write("./srecord1", &bm).unwrap();
+    // decompress(&blob);
     // parse_s_records(&bm);
 }

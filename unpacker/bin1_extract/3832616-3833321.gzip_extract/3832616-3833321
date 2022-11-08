@@ -1,0 +1,98 @@
+<man:Manifest xmlns:man="http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24"
+              xmlns:map="http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27"
+              xmlns:job="http://www.hp.com/schemas/imaging/con/ledm/jobs/2009/04/30" 
+              xmlns:dd="http://www.hp.com/schemas/imaging/con/dictionaries/1.0/" 
+              xmlns:dd2="http://www.hp.com/schemas/imaging/con/dictionaries/2008/10/10" 
+              xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+              xsi:schemaLocation="
+    http://www.hp.com/schemas/imaging/con/ledm/manifest/2009/03/24 ../schemas/Manifest.xsd
+    http://www.hp.com/schemas/imaging/con/ledm/resourcemap/2009/01/27 ../schemas/ResourceMap.xsd
+    http://www.hp.com/schemas/imaging/con/ledm/jobs/2009/04/30 ../schemas/jobs.xsd
+    http://www.hp.com/schemas/imaging/con/dictionaries/1.0/ ../schemas/dd/DataDictionaryMasterLEDM.xsd
+    http://www.hp.com/schemas/imaging/con/dictionaries/2008/10/10  ../schemas/dd2/DataDictionaryMasterLEDM.xsd">
+	<dd:Version>
+		<dd:Revision>SVN.3367</dd:Revision>
+	</dd:Version>
+  <man:InterfaceNamespaces>
+    <man:InterfaceNamespace>http://www.hp.com/schemas/imaging/con/ledm/jobs/2009/04/30/jobs.xsd</man:InterfaceNamespace>
+  </man:InterfaceNamespaces>
+	<map:ResourceMap>
+    <map:ResourceLink>
+      <dd:ResourceURI>/Jobs</dd:ResourceURI>
+      <map:Base>Root</map:Base>
+       </map:ResourceLink>
+		   <map:ResourceNode>
+        <map:ResourceLink>
+          <dd:ResourceURI>/JobList</dd:ResourceURI>
+        </map:ResourceLink>
+        <map:ResourceType>
+          <job:JobsResourceType>JobList</job:JobsResourceType>
+        </map:ResourceType>
+        <map:Methods>
+				<map:Method>
+					<map:Verb>Get</map:Verb>
+				</map:Method>
+			</map:Methods>
+			<map:XmlElement>
+				<job:JobList xsi:nil="true"/>
+			</map:XmlElement>
+			<map:ResourceMap>
+        <map:ResourceNode>
+				   <map:ResourceLink>
+            <dd:ResourceURI>/{job:job-state}</dd:ResourceURI>
+            <job:job-state>xs:QName</job:job-state>
+          </map:ResourceLink>
+          <map:ResourceType>
+            <job:JobsResourceType>JobList</job:JobsResourceType>
+          </map:ResourceType>
+          <map:Methods>
+						<map:Method>
+							<map:Verb>Get</map:Verb>
+						</map:Method>
+					</map:Methods>
+					<map:XmlElement>
+						<job:JobList xsi:nil="true"/>
+					</map:XmlElement>
+				</map:ResourceNode>
+        <map:ResourceNode>
+          <map:ResourceLink>
+            <dd:ResourceURI>/{job:job-category}</dd:ResourceURI>
+            <job:job-category>xs:QName</job:job-category>
+          </map:ResourceLink>
+          <map:ResourceType>
+            <job:JobsResourceType>JobList</job:JobsResourceType>
+          </map:ResourceType>
+          <map:Methods>
+						<map:Method>
+							<map:Verb>Get</map:Verb>
+						</map:Method>
+					</map:Methods>
+					<map:XmlElement>
+						<job:JobList xsi:nil="true"/>
+					</map:XmlElement>
+				</map:ResourceNode>
+          <map:ResourceNode>
+            <map:ResourceLink>
+              <dd:ResourceURI>/{job:job-id}</dd:ResourceURI>
+              <job:job-id>xs:positiveInteger</job:job-id>
+           </map:ResourceLink>
+            <map:ResourceType>
+              <job:JobsResourceType>JobList</job:JobsResourceType>
+            </map:ResourceType>
+					<map:Methods>
+						<map:Method>
+							<map:Verb>Get</map:Verb>
+						</map:Method>
+						<map:Method>
+							<map:Verb>Put</map:Verb>
+						</map:Method>
+					</map:Methods>
+					<map:XmlElement>
+						<job:Job xsi:nil="true"/>
+					</map:XmlElement>
+				</map:ResourceNode>
+			</map:ResourceMap>
+		</map:ResourceNode>
+	</map:ResourceMap>
+</man:Manifest>

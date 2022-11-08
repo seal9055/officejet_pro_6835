@@ -1,0 +1,1 @@
+(function(){if(apps.wired==null){apps.wired={}}var a=apps.wired.ipv6={};a.preProcessTemplate=function(){};a.onLoad=function(){apps.net.ipv6Gui.onLoad.call(this,"EthernetAdapter")};a.onUnLoad=function(){apps.net.ipv6Gui.onUnLoad.call(this)}})();
