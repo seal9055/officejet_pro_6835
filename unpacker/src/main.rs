@@ -567,6 +567,7 @@ fn extract_bitmap(pjls: &Vec<PJLCommand>) -> Vec<u8> {
     result
 }
 
+#[derive(Debug)]
 struct Header {
     magic: u32,
     header_size: u32,
@@ -580,13 +581,33 @@ struct Header {
 fn parse_headers(srecords: &[u8]) -> Header {
     Header {
         magic: bytes_to_int_be(&srecords[0x0..0x4], 4) as u32,
-        header_size: bytes_to_int_be(&srecords[0x8..0xb], 4) as u32,
+        header_size: bytes_to_int_be(&srecords[0x8..0xc], 4) as u32,
         page_size: bytes_to_int_be(&srecords[0x10..0x14], 4) as u32,
-        bmp_size: bytes_to_int_be(&srecords[0x1c..0x1f], 4) as u32,
+        bmp_size: bytes_to_int_be(&srecords[0x1c..0x20], 4) as u32,
         load_addr: bytes_to_int_be(&srecords[0x30..0x34], 4) as u32,
         load_size: bytes_to_int_be(&srecords[0x34..0x38], 4) as u32,
-        exec_addr: bytes_to_int_be(&srecords[0x3c..0x3f], 4) as u32,
+        exec_addr: bytes_to_int_be(&srecords[0x3c..0x40], 4) as u32,
     }
+}
+
+/// Parse out the firmware from the raw flash image
+fn parse_firmware(header: &Header, data: &[u8]) -> Vec<u8> {
+    // Calculate the number of pages occupied by the bootsplash bmp, round up to nearest page
+    let num_bmp_pages: usize = (header.bmp_size / header.page_size) as usize + 
+        if (header.bmp_size % header.page_size) > 0 { 1 } else { 0 };
+
+    // Calculate the number of pages occupied by the firmware, round up to nearest page
+    let num_firmware_pages: usize = (header.load_size / header.page_size) as usize + 
+        if (header.page_size % header.page_size) > 0 { 1 } else { 0 };
+
+    // Get start address and end address of firmware to then extract it from data
+    let start_addr = (num_bmp_pages + 1) * header.page_size as usize;
+    let end_addr = start_addr + (num_firmware_pages * header.page_size as usize);
+    let firmware_data = &data[start_addr..end_addr];
+
+    assert_eq!(firmware_data.len(), num_firmware_pages * header.page_size as usize);
+
+    firmware_data.to_vec()
 }
 
 fn main() {
@@ -594,10 +615,19 @@ fn main() {
     let raw = parse_pjl(&blob);
     let bm = extract_bitmap(&raw);
     let srecord = parse_s_records(&bm);
+    let data = print_binary_record(&srecord);
 
-    let headers = parse_headers(&srecord);
+    let header = parse_headers(&data);
+    assert_eq!(header.magic, 0xBAD2BFED);
 
-    std::fs::write("./bin1", print_binary_record(&srecord)).unwrap();
+    let firmware = parse_firmware(&header, &data);
+
+
+    std::fs::write("./bin1", data).unwrap();
+    std::fs::write("./firmware", firmware).unwrap();
+
+    println!("{:#0X?}", header);
+    println!("Map binary base to 0x26710000, with start address at 0x27FFC118.");
 
     // std::fs::write("./srecord1", &bm).unwrap();
     // decompress(&blob);
