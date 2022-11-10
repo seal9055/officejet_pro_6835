@@ -611,7 +611,7 @@ fn parse_firmware(header: &Header, data: &[u8]) -> Vec<u8> {
 }
 
 fn main() {
-    let blob = std::fs::read("./firmware_blob.bin").unwrap();
+    let blob = std::fs::read("./init_blob.bin").unwrap();
     let raw = parse_pjl(&blob);
     let bm = extract_bitmap(&raw);
     let srecord = parse_s_records(&bm);
@@ -622,14 +622,8 @@ fn main() {
 
     let firmware = parse_firmware(&header, &data);
 
-
-    std::fs::write("./bin1", data).unwrap();
     std::fs::write("./firmware", firmware).unwrap();
 
     println!("{:#0X?}", header);
     println!("Map binary base to 0x26710000, with start address at 0x27FFC118.");
-
-    // std::fs::write("./srecord1", &bm).unwrap();
-    // decompress(&blob);
-    // parse_s_records(&bm);
 }
