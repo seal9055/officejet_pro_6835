@@ -72,48 +72,6 @@ int32_t uncompress(uint8_t* dst, uint8_t* src, int32_t len) {
     return (dst - base);
 }
 
-unsigned int lzssDecompress(unsigned char *dst, const unsigned char *src, int size) {
-  unsigned char *base = dst;
-  unsigned char flags = 0;
-  unsigned char mask  = 0;
-  unsigned int  len;
-  unsigned int  disp;
-
-  while(size > 0) {
-    if(mask == 0) {
-      // read in the flags data
-      // from bit 7 to bit 0:
-      //     0: raw byte
-      //     1: compressed block
-      flags = *src++;
-      mask  = 0x80;
-    }
-
-    if(flags & mask) { // compressed block
-      // disp: displacement
-      // len:  length
-      len  = (((*src)&0xF0)>>4)+3;
-      disp = ((*src++)&0x0F);
-      disp = disp<<8 | (*src++);
-
-      size -= len;
-
-      // for len, copy data from the displacement
-      // to the current buffer position
-      memcpy(dst, dst-disp-1, len);
-      dst += len;
-    }
-    else { // uncompressed block
-      // copy a raw byte from the input to the output
-      *dst++ = *src++;
-      size--;
-    }
-
-    mask >>= 1;
-  }
-  return (dst - base);
-}
-
 int main() {
     unsigned int src_data_1 = 0x14b18;
     unsigned int len_data_1 = 0x3cfa;
@@ -145,9 +103,9 @@ int main() {
     memcpy(dst_2, buf+src_data_2, len_data_2);
     memcpy(dst_3, buf+src_data_3, len_data_3);
 
-    unsigned int uncompressed_len_1 = lzssDecompress(uncompressed_1, dst_1, len_data_1);
-    unsigned int uncompressed_len_2 = lzssDecompress(uncompressed_2, dst_2, len_data_2);
-    unsigned int uncompressed_len_3 = lzssDecompress(uncompressed_3, dst_3, len_data_3);
+    unsigned int uncompressed_len_1 = uncompress(uncompressed_1, dst_1, len_data_1);
+    unsigned int uncompressed_len_2 = uncompress(uncompressed_2, dst_2, len_data_2);
+    unsigned int uncompressed_len_3 = uncompress(uncompressed_3, dst_3, len_data_3);
     unsigned int uncompressed_len_4 = uncompress(buf_dst, buf, fsize);
 
     printf("LENGTHS: %d ; %d ; %d", uncompressed_len_1, uncompressed_len_2, uncompressed_len_3);

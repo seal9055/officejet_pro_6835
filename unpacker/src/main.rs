@@ -659,6 +659,7 @@ fn main() {
     decompress_data(&firmware);
 
     //std::fs::write("./firmware", output).unwrap();
+    std::fs::write("./firmware", firmware).unwrap();
 
     println!("{:#0X?}", header);
     println!("Map binary base to 0x26710000, with start address at 0x27FFC118.");

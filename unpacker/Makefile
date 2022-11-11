@@ -1,6 +1,7 @@
 all:
 	cargo run --release
 	gcc lzss.c -m32 -o lzss
+	gcc lzss.c -o lzss
 	./lzss
 
 clean:
