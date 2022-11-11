@@ -430,7 +430,7 @@ fn parse_pjl(blob: &Vec<u8>) -> Vec<PJLCommand> {
 }
 
 fn decompress_bitmap(compress_type: (u8, &Command), blob: &Vec<u8>, seed_row: &Vec<u8>) -> Vec<u8> {
-    println!("INFO: Decompressing type {:X}", compress_type.0);
+    //println!("INFO: Decompressing type {:X}", compress_type.0);
     match compress_type {
         (0, _) => {
             let mut expand = blob.to_vec();
@@ -551,7 +551,7 @@ fn extract_bitmap(pjls: &Vec<PJLCommand>) -> Vec<u8> {
 
     let mut c_type = 0;
     for part in &pjls[start + 1..end] {
-        println!("Decompressing at {:X}", part.offset);
+        //println!("Decompressing at {:X}", part.offset);
         for param in part.params.iter() {
             match param {
                 Param::compression(level) => {
@@ -628,7 +628,7 @@ fn decompress_data(firmware: &Vec<u8>) {
     let data3 = &firmware[src_data_3..src_data_3+len_data_3];
     let mut output3 = vec![0; data3.len() * 5];
 
-    type MyLzss = Lzss<12, 4, 0x20, { 1 << 12 }, { 2 << 12 }>;
+    type MyLzss = Lzss<12, 4, 0x0, { 1 << 12 }, { 2 << 12 }>;
     let res1 = MyLzss::decompress(SliceReader::new(&data1),
         SliceWriter::new(&mut output1));
     let res2 = MyLzss::decompress(SliceReader::new(&data1),
@@ -645,6 +645,51 @@ fn decompress_data(firmware: &Vec<u8>) {
     std::fs::write("./data3c", output3).unwrap();
 }
 
+#[derive(Debug)]
+struct Segment {
+    next: u32,
+    size: u32,
+    padding: Vec<u8>,
+    name: String,
+}
+
+fn segment_table(firmware: &Vec<u8>) -> Vec<Segment> {
+    let load_addr = 0x26710000;
+    let mut segments: Vec<Segment> = Vec::new();
+
+    let mut next = 0x68690;
+    while next != 0x0 {
+        let mut tmp = Vec::new();
+        let mut name = Vec::new();
+        let str_name;
+
+        // Parse out padding
+        for i in 0..0x15 {
+            tmp.push(firmware[next+4+i]);
+        }
+
+        let size = bytes_to_int_be(&firmware[next+0xc..], 4);
+
+        // Parse out name
+        let mut j = 0;
+        while firmware[next+0x19+j] != 0x0 {
+            name.push(firmware[next+4+0x15+j]);
+            j+=1;
+        }
+        str_name = std::str::from_utf8(&name).unwrap();
+
+        next = bytes_to_int_be(&firmware[next..], 4).checked_sub(load_addr).unwrap_or(0);
+        segments.push(Segment {
+                next: next as u32,
+                size: size as u32,
+                padding: tmp,
+                name: str_name.to_string(),
+            });
+    }
+    segments
+    
+}
+
 fn main() {
     let blob = std::fs::read("./init_blob.bin").unwrap();
     let raw = parse_pjl(&blob);
@@ -658,9 +703,14 @@ fn main() {
     let firmware = parse_firmware(&header, &data);
     decompress_data(&firmware);
 
+    // TODO, currently finding names and sizes
+    // -> Need to find file-offset and load-address
+    let segment_table = segment_table(&firmware);
+
     //std::fs::write("./firmware", output).unwrap();
     std::fs::write("./firmware", firmware).unwrap();
 
     println!("{:#0X?}", header);
+    println!("{:#0X?}", segment_table);
     println!("Map binary base to 0x26710000, with start address at 0x27FFC118.");
 }
