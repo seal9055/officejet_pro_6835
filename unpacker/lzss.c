@@ -87,50 +87,156 @@ int main(void) {
 #endif
     unsigned int base = BASE;
     printf("Base: 0x%x\n", base);
-    unsigned int src_data_1 = 0x26724b18 - base;
-    unsigned int len_data_1 = 0x3cfa;
-    uint8_t *dst_1 = malloc(len_data_1);
-    uint8_t *uncompressed_1 = malloc(len_data_1 * 100);
+    //unsigned int src_data_1 = 0x26724b18 - base;
+    //unsigned int len_data_1 = 0x3cfa;
+    //uint8_t *dst_1 = malloc(len_data_1);
+    //uint8_t *uncompressed_1 = malloc(len_data_1 * 100);
 
-    unsigned int src_data_2 = 0x26722398 - base;
-    unsigned int len_data_2 = 0x277f;
-    uint8_t *dst_2 = malloc(len_data_2);
-    uint8_t *uncompressed_2 = malloc(len_data_2 * 100);
+    //unsigned int src_data_2 = 0x26722398 - base;
+    //unsigned int len_data_2 = 0x277f;
+    //uint8_t *dst_2 = malloc(len_data_2);
+    //uint8_t *uncompressed_2 = malloc(len_data_2 * 100);
 
-    unsigned int src_data_3 = 0x267107b0 - base;
-    unsigned int len_data_3 = 0x11be7;
-    uint8_t *dst_3 = malloc(len_data_3);
-    uint8_t *uncompressed_3 = malloc(len_data_3 * 10);
+    //unsigned int src_data_3 = 0x267107b0 - base;
+    //unsigned int len_data_3 = 0x11be7;
+    //uint8_t *dst_3 = malloc(len_data_3);
+    //uint8_t *uncompressed_3 = malloc(len_data_3 * 10);
+
+    // Cromtext
+    unsigned int src_cromtext = 0x26778EF8 - base;
+    unsigned int len_cromtext = 0x6D5F25;
+    uint8_t *dst_cromtext = malloc(len_cromtext);
+    uint8_t *uncompressed_cromtext = malloc(len_cromtext * 100);
+
+
+    // Cromdata
+    unsigned int src_cromdata = 0x278cf318 - base;
+    unsigned int len_cromdata = 0x4c11a;
+    uint8_t *dst_cromdata = malloc(len_cromdata);
+    uint8_t *uncompressed_cromdata = malloc(len_cromdata * 100);
+
+    // Cromrodata
+    unsigned int src_crom_ro_data = 0x2757a360 - base;
+    unsigned int len_crom_ro_data = 0x354fb8;
+    uint8_t *dst_crom_ro_data = malloc(len_crom_ro_data);
+    uint8_t *uncompressed_crom_ro_data = malloc(len_crom_ro_data * 100);
+
+
+    // Cromncdata
+    unsigned int src_crom_nc_data = 0x2791b434 - base;
+    unsigned int len_crom_nc_data = 0x30d;
+    uint8_t *dst_crom_nc_data = malloc(len_crom_nc_data);
+    uint8_t *uncompressed_crom_nc_data = malloc(len_crom_nc_data * 100);
+
+    // Crom Module
+    unsigned int src_crom_module = 0x27ff166c - base;
+    unsigned int len_crom_module = 0x73a;
+    uint8_t *dst_crom_module = malloc(len_crom_module);
+    uint8_t *uncompressed_crom_module = malloc(len_crom_module * 100);
+
+    // Crom FS
+    unsigned int src_crom_fs = 0x27ff1da8 - base;
+    unsigned int len_crom_fs = 0x502;
+    uint8_t *dst_crom_fs = malloc(len_crom_fs);
+    uint8_t *uncompressed_crom_fs = malloc(len_crom_fs * 100);
+
+    // Crom FS Objects
+    unsigned int src_crom_fs_objs = 0x27ff22ac - base;
+    unsigned int len_crom_fs_objs = 0x32b9;
+    uint8_t *dst_crom_fs_objs = malloc(len_crom_fs_objs);
+    uint8_t *uncompressed_crom_fs_objs = malloc(len_crom_fs_objs * 100);
+
+    // Cromfixcon Display
+    //unsigned int src_cromfixcon_display = 0x - base;
+    //unsigned int len_cromfixcon_display = 0x4c11a;
+    //uint8_t *dst_cromfixcon_display = malloc(len_cromfixcon_display);
+    //uint8_t *uncompressed_cromfixcon_display = malloc(len_cromfixcon_display * 100);
+
+    //// Cromfixcon data
+    //unsigned int src_cromfixcon_dat = 0x278cf318 - base;
+    //unsigned int len_cromfixcon_dat = 0x4c11a;
+    //uint8_t *dst_cromfixcon_dat = malloc(len_cromfixcon_dat);
+    //uint8_t *uncompressed_cromfixcon_dat = malloc(len_cromfixcon_dat * 100);
+
+    ///// Cromfixcon
+    //unsigned int src_cromfixcon = 0x278cf318 - base;
+    //unsigned int len_cromfixcon = 0x4c11a;
+    //uint8_t *dst_cromfixcon = malloc(len_cromfixcon);
+    //uint8_t *uncompressed_cromfixcon = malloc(len_cromfixcon * 100);
 
     // Read firmware file into memory
-    FILE *fd = fopen("firmware", "rb");
+    FILE *fd = fopen("firmware_with_3_data", "rb");
     fseek(fd, 0, SEEK_END);
     size_t fsize = (size_t)ftell(fd);
     fseek(fd, 0, SEEK_SET);
 
+    // Load firmware
     char *buf = malloc(fsize);
     fread(buf, fsize, 1, fd);
     fclose(fd);
 
-    memcpy(dst_1, buf + src_data_1, len_data_1);
-    memcpy(dst_2, buf + src_data_2, len_data_2);
-    memcpy(dst_3, buf + src_data_3, len_data_3);
+    // Load bytes from disk-firmware into memory
+    //memcpy(dst_1, buf + src_data_1, len_data_1);
+    //memcpy(dst_2, buf + src_data_2, len_data_2);
+    //memcpy(dst_3, buf + src_data_3, len_data_3);
+    memcpy(dst_cromtext, buf + src_cromtext, len_cromtext);
+    memcpy(dst_cromdata, buf + src_cromdata, len_cromdata);
+    memcpy(dst_crom_ro_data, buf + src_crom_ro_data, len_crom_ro_data);
+    memcpy(dst_crom_nc_data, buf + src_crom_nc_data, len_crom_nc_data);
+    memcpy(dst_crom_module, buf + src_crom_module, len_crom_module);
+    memcpy(dst_crom_fs, buf + src_crom_fs, len_crom_fs);
+    memcpy(dst_crom_fs_objs, buf + src_crom_fs_objs, len_crom_fs_objs);
+    
+    // Decompress the segments
+    //unsigned int uncompressed_len_1 =
+    //    uncompress(uncompressed_1, dst_1, len_data_1);
+    //unsigned int uncompressed_len_2 =
+    //    uncompress(uncompressed_2, dst_2, len_data_2);
+    //unsigned int uncompressed_len_3 =
+    //    uncompress(uncompressed_3, dst_3, len_data_3);
 
-    unsigned int uncompressed_len_1 =
-        uncompress(uncompressed_1, dst_1, len_data_1);
-    unsigned int uncompressed_len_2 =
-        uncompress(uncompressed_2, dst_2, len_data_2);
-    unsigned int uncompressed_len_3 =
-        uncompress(uncompressed_3, dst_3, len_data_3);
+    unsigned int uncompressed_cromtext_len =
+        uncompress(uncompressed_cromtext, dst_cromtext, len_cromtext);
+    unsigned int uncompressed_cromdata_len =
+        uncompress(uncompressed_cromdata, dst_cromdata, len_cromdata);
 
-    FILE *file_1 = fopen("data1", "wb");
-    fwrite(uncompressed_1, uncompressed_len_1, 1, file_1);
+    unsigned int uncompressed_crom_ro_data_len =
+        uncompress(uncompressed_crom_ro_data, dst_crom_ro_data, len_crom_ro_data);
+    unsigned int uncompressed_crom_nc_data_len =
+        uncompress(uncompressed_crom_nc_data, dst_crom_nc_data, len_crom_nc_data);
+    unsigned int uncompressed_crom_module_len =
+        uncompress(uncompressed_crom_module, dst_crom_module, len_crom_module);
+    unsigned int uncompressed_crom_fs_len =
+        uncompress(uncompressed_crom_fs, dst_crom_fs, len_crom_fs);
+    unsigned int uncompressed_crom_fs_objs_len =
+        uncompress(uncompressed_crom_fs_objs, dst_crom_fs_objs, len_crom_fs_objs);
 
-    FILE *file_2 = fopen("data2", "wb");
-    fwrite(uncompressed_2, uncompressed_len_2, 1, file_2);
+    //FILE *file_1 = fopen("data1", "wb");
+    //fwrite(uncompressed_1, uncompressed_len_1, 1, file_1);
 
-    FILE *file_3 = fopen("data3", "wb");
-    fwrite(uncompressed_3, uncompressed_len_3, 1, file_3);
+    //FILE *file_2 = fopen("data2", "wb");
+    //fwrite(uncompressed_2, uncompressed_len_2, 1, file_2);
+
+    //FILE *file_3 = fopen("data3", "wb");
+    //fwrite(uncompressed_3, uncompressed_len_3, 1, file_3);
+
+    FILE *file_4 = fopen("cromtext", "wb");
+    fwrite(uncompressed_cromtext, len_cromtext, 1, file_4);
+
+    FILE *file_5 = fopen("cromdata", "wb");
+    fwrite(uncompressed_cromdata, len_cromdata, 1, file_5);
+
+    FILE *file_6 = fopen("crom_ro_data", "wb");
+    fwrite(uncompressed_crom_ro_data, len_crom_ro_data, 1, file_6);
+    FILE *file_7 = fopen("crom_nc_data", "wb");
+    fwrite(uncompressed_crom_nc_data, len_crom_nc_data, 1, file_7);
+    FILE *file_8 = fopen("crom_module", "wb");
+    fwrite(uncompressed_crom_module, len_crom_module, 1, file_8);
+    FILE *file_9 = fopen("crom_fs", "wb");
+    fwrite(uncompressed_crom_fs, len_crom_fs, 1, file_9);
+    FILE *file_10 = fopen("crom_fs_objs", "wb");
+    fwrite(uncompressed_crom_fs_objs, len_crom_fs_objs, 1, file_10);
+
     puts("Write finished");
     return 0;
 }

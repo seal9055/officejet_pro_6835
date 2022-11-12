@@ -1,5 +1,7 @@
 use lzss::*;
 
+const LOAD_ADDR: usize = 0x26710000;
+
 /// Different types the S-Record can take. Extracted from the byte following the 'S' while parsing
 /// the data
 #[derive(Debug)]
@@ -647,47 +649,59 @@ fn decompress_data(firmware: &Vec<u8>) {
 
 #[derive(Debug)]
 struct Segment {
+    /// Pointer to next element of linked list
     next: u32,
-    size: u32,
-    padding: Vec<u8>,
+
+    /// Segment Name
     name: String,
+
+    /// Starting address of section
+    start: u32,
+
+    /// Size of section
+    size: u32,
+
+    /// Possible permission flags
+    perms: u32,
+
+    /// Used for intermediate loads using memcpys
+    dst: u32,
 }
 
+/// Parse out segment table
 fn segment_table(firmware: &Vec<u8>) -> Vec<Segment> {
-    let load_addr = 0x26710000;
     let mut segments: Vec<Segment> = Vec::new();
 
     let mut next = 0x68690;
     while next != 0x0 {
-        let mut tmp = Vec::new();
         let mut name = Vec::new();
         let str_name;
 
-        // Parse out padding
-        for i in 0..0x15 {
-            tmp.push(firmware[next+4+i]);
-        }
-
-        let size = bytes_to_int_be(&firmware[next+0xc..], 4);
+        let name_addr = bytes_to_int_be(&firmware[next+4..], 4) - LOAD_ADDR;
+        let start = bytes_to_int_be(&firmware[next+8..], 4);
+        let size = bytes_to_int_be(&firmware[next+12..], 4);
+        let perms = bytes_to_int_be(&firmware[next+16..], 4);
+        let dst = bytes_to_int_be(&firmware[next+20..], 4);
 
         // Parse out name
-        let mut j = 0;
-        while firmware[next+0x19+j] != 0x0 {
-            name.push(firmware[next+4+0x15+j]);
-            j+=1;
+        let mut i = 0;
+        while firmware[name_addr+i] != 0x0 {
+            name.push(firmware[name_addr+i]);
+            i+=1;
         }
         str_name = std::str::from_utf8(&name).unwrap();
 
-        next = bytes_to_int_be(&firmware[next..], 4).checked_sub(load_addr).unwrap_or(0);
+        next = bytes_to_int_be(&firmware[next..], 4).checked_sub(LOAD_ADDR).unwrap_or(0);
         segments.push(Segment {
-                next: next as u32,
-                size: size as u32,
-                padding: tmp,
+                next: (next + LOAD_ADDR) as u32,
                 name: str_name.to_string(),
+                start: start as u32,
+                size: size as u32,
+                perms: perms as u32,
+                dst: dst as u32,
             });
     }
     segments
-    
 }
 
 fn main() {
