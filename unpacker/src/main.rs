@@ -1,5 +1,3 @@
-use lzss::*;
-
 const LOAD_ADDR: usize = 0x26710000;
 
 /// Different types the S-Record can take. Extracted from the byte following the 'S' while parsing
@@ -614,39 +612,6 @@ fn parse_firmware(header: &Header, data: &[u8]) -> Vec<u8> {
     firmware_data.to_vec()
 }
 
-fn decompress_data(firmware: &Vec<u8>) {
-    let src_data_1: usize = 0x14b18;
-    let len_data_1: usize = 0x3cfa;
-    let data1 = &firmware[src_data_1..src_data_1+len_data_1];
-    let mut output1 = vec![0; data1.len() * 5];
-
-    let src_data_2: usize = 0x12398;
-    let len_data_2: usize = 0x277f;
-    let data2 = &firmware[src_data_2..src_data_2+len_data_2];
-    let mut output2 = vec![0; data2.len() * 5];
-
-    let src_data_3: usize = 0x7b0;
-    let len_data_3: usize = 0x11be7;
-    let data3 = &firmware[src_data_3..src_data_3+len_data_3];
-    let mut output3 = vec![0; data3.len() * 5];
-
-    type MyLzss = Lzss<12, 4, 0x0, { 1 << 12 }, { 2 << 12 }>;
-    let res1 = MyLzss::decompress(SliceReader::new(&data1),
-        SliceWriter::new(&mut output1));
-    let res2 = MyLzss::decompress(SliceReader::new(&data1),
-        SliceWriter::new(&mut output2));
-    let res3 = MyLzss::decompress(SliceReader::new(&data1),
-        SliceWriter::new(&mut output3));
-
-    assert!(res1.is_ok());
-    assert!(res2.is_ok());
-    assert!(res3.is_ok());
-
-    std::fs::write("./data1c", output1).unwrap();
-    std::fs::write("./data2c", output2).unwrap();
-    std::fs::write("./data3c", output3).unwrap();
-}
-
 #[derive(Debug)]
 struct Segment {
     /// Pointer to next element of linked list
@@ -715,13 +680,8 @@ fn main() {
     assert_eq!(header.magic, 0xBAD2BFED);
 
     let firmware = parse_firmware(&header, &data);
-    decompress_data(&firmware);
-
-    // TODO, currently finding names and sizes
-    // -> Need to find file-offset and load-address
     let segment_table = segment_table(&firmware);
 
-    //std::fs::write("./firmware", output).unwrap();
     std::fs::write("./firmware", firmware).unwrap();
 
     println!("{:#0X?}", header);
