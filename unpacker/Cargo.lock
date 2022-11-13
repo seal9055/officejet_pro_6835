@@ -3,23 +3,5 @@
 version = 3
 
 [[package]]
-name = "lzss"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e2b9a6124e5200c13bb5c5d1124bf93b451bff69b651912810039e36ca97eb"
-dependencies = [
- "void",
-]
-
-[[package]]
 name = "unpacker"
 version = "0.1.0"
-dependencies = [
- "lzss",
-]
-
-[[package]]
-name = "void"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
