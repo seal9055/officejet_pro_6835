@@ -6,6 +6,9 @@ use unpacker::{
 };
 
 /// Start of table that is used to retrieve section details for decompression
+/// Finding this could be automated by instead searching memory of the firmware for the magic value
+/// `0x3ca55a3c`, marking the start of the app_hdr struct, which can be used to retrieve this 
+/// address
 const TABLE_START: usize = 0x68690;
 
 /// Firmware Header
@@ -126,6 +129,154 @@ impl Firmware {
     }
 }
 
+#[derive(Default, Debug, Copy, Clone)]
+struct AppHeader {
+    magic: usize,
+    size: usize,
+    _magic1: usize,
+    _magic2: usize,
+    _bootsplash_bmp: usize,
+    entry_point: usize,
+    protected_count: usize,
+    protected_addr: usize,
+    section_linked_list: usize,
+    memset_list_start: usize,
+    memset_list_end: usize,
+    copy_list_start: usize,
+    copy_list_end: usize,
+    _copy_list_barrier: usize,
+    uncompress_list_start: usize,
+    uncompress_list_end: usize,
+    _uncompress_list_barrier: usize,
+}
+
+#[derive(Default, Debug)]
+struct BootLoader {
+    /// App header used to parse out other important structures
+    header: AppHeader,
+
+    /// Each entry lists start and end addresses of a protected section. Protected sections should 
+    /// not be overwritten
+    protected_ranges: Vec<(usize, usize)>,
+
+    /// dst, src, compressed_size that are passed to the uncompress section to later decompress
+    uncompress_tripples: Vec<(usize, usize, usize)>,
+
+    /// dst, src, length that are passed to the memcpy function to setup memory mappings
+    memcpy_tripples: Vec<(usize, usize, usize)>,
+
+    /// dst, val, length that are passed to the memset function to setup memory mappings
+    memset_tripples: Vec<(usize, usize, usize)>,
+}
+
+const APP_HEADER_MAGIC: usize = 0x3ca55a3c;
+impl BootLoader {
+    /// Parse out app header structure from firmware
+    pub fn parse_header(&mut self, firmware: &Firmware) -> Option<()> {
+        // Find header offset
+        let mut index = 0;
+        let mut app_hdr_index: Option<usize> = None;
+
+        // Find app_hdr struct based on magic value
+        firmware.data.chunks_exact(4).for_each(|e| {
+            if bytes_to_int_be(e, 4) == APP_HEADER_MAGIC {
+                assert!(app_hdr_index.is_none(), "Found magic bytes more than once. Failed to \
+                        automatically locate app header");
+                    app_hdr_index = Some(index);
+            }
+            index += 4;
+        });
+        assert!(app_hdr_index.is_some());
+
+        self.header.magic = APP_HEADER_MAGIC;
+        self.header.size = bytes_to_int_be(&firmware.data[app_hdr_index?+4..app_hdr_index?+8], 4);
+        self.header.entry_point = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+52..app_hdr_index?+56], 4);
+        self.header.protected_count = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?-4..app_hdr_index?], 4);
+        self.header.protected_addr = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+60..app_hdr_index?+64], 4);
+        self.header.section_linked_list = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+64..app_hdr_index?+68], 4);
+        self.header.memset_list_start = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+72..app_hdr_index?+76], 4);
+        self.header.memset_list_end = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+76..app_hdr_index?+80], 4);
+        self.header.copy_list_start = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+80..app_hdr_index?+84], 4);
+        self.header.copy_list_end = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+84..app_hdr_index?+88], 4);
+        self.header.uncompress_list_start = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+92..app_hdr_index?+96], 4);
+        self.header.uncompress_list_end = 
+            bytes_to_int_be(&firmware.data[app_hdr_index?+96..app_hdr_index?+100], 4);
+
+        Some(())
+    }
+
+    /// Parse out protected segments from firmware. These are address ranges that should not be 
+    /// overwritten since they are virtal for the boot process
+    pub fn initialize_protected(&mut self, firmware: &Firmware) -> Option<()> {
+        for i in 0..self.header.protected_count {
+            let start = bytes_to_int_be(&firmware.data[
+                self.header.protected_addr - firmware.header.load_addr + i*8..
+                self.header.protected_addr - firmware.header.load_addr + i*8 + 4], 4);
+
+            let end = bytes_to_int_be(&firmware.data[
+                self.header.protected_addr - firmware.header.load_addr + i*8+4..
+                self.header.protected_addr - firmware.header.load_addr + i*8 + 8], 4);
+
+            self.protected_ranges.push((start, end));
+        }
+        Some(())
+    }
+
+    /// Parse out protected segments from firmware. These are address ranges that should not be 
+    /// overwritten since they are virtal for the boot process
+    pub fn parse_tripples(&mut self, data: &[u8]) 
+        -> Option<Vec<(usize, usize, usize)>> {
+
+            Some(data.chunks_exact(12)
+            .map(|e| {
+                (
+                    bytes_to_int_be(&e[0..4], 4),
+                    bytes_to_int_be(&e[4..8], 4),
+                    bytes_to_int_be(&e[8..12], 4),
+                )
+            }).collect())
+    }
+
+    /// Parse out protected segments from firmware. These are address ranges that should not be 
+    /// overwritten since they are virtal for the boot process
+    pub fn initialize_tripples(&mut self, firmware: &Firmware) {
+        // Parse out uncompress tripples
+        self.uncompress_tripples = self.parse_tripples(
+            &firmware.data[self.header.uncompress_list_start - firmware.header.load_addr..
+            self.header.uncompress_list_end - firmware.header.load_addr]).unwrap();
+
+        // Parse out memset tripples
+        self.memset_tripples = self.parse_tripples(
+            &firmware.data[self.header.memset_list_start - firmware.header.load_addr..
+            self.header.memset_list_end - firmware.header.load_addr]).unwrap();
+
+        // Parse out memcpy tripples
+        self.memcpy_tripples = self.parse_tripples(
+            &firmware.data[self.header.copy_list_start - firmware.header.load_addr..
+            self.header.copy_list_end - firmware.header.load_addr]).unwrap();
+    }
+
+    /// Return true if given range overlaps with a protected section
+    pub fn is_protected(&self, start: usize, end: usize) -> bool {
+        for protected_section in self.protected_ranges.iter() {
+            if std::cmp::max(protected_section.0, start) 
+                <= std::cmp::min(protected_section.1, end) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 fn main() {
     let blob = std::fs::read("./init_blob.bin").unwrap();
     let raw = parse_pjl(&blob);
@@ -138,12 +289,94 @@ fn main() {
     firmware.parse_data(&data);
     firmware.parse_segments();
 
+    //println!("HEADER: {:#X?}", firmware.header);
     std::fs::write("./firmware", &firmware.data).unwrap();
 
-    // TODO idk if this should be done on the original firmware, or the firmware with the 3 
-    // initial data sections appended to it
-    // let fw_3_data = std::fs::read("./firmware_with_3_data").unwrap();
+    let mut bootloader = BootLoader::default();
+    bootloader.parse_header(&firmware);
+    bootloader.initialize_protected(&firmware);
+    bootloader.initialize_tripples(&firmware);
 
+    //println!("PROTECTED: {:#X?}", bootloader.protected_ranges);
+
+    let _ = std::fs::remove_dir_all("segments");
+    std::fs::create_dir_all("segments").unwrap();
+
+    // Uncompress all tripples related to sections meant to be uncompressed
+    for tripple in &bootloader.uncompress_tripples {
+        let dst  = tripple.0;
+        let src  = tripple.1;
+        let size = tripple.2;
+
+        if size == 0 {
+            continue;
+        }
+
+        let data = lzss_uncompress(&firmware.data[src
+                                   .checked_sub(firmware.header.load_addr).unwrap()..
+                                   (src - firmware.header.load_addr)
+                                   .checked_add(size).unwrap()]);
+
+        // Verify that this section is not going to be overwriting a protected segment
+        if bootloader.is_protected(dst, dst+data.len()) {
+            println!("[!] Uncompress: Found protected at: {:#X?} : {:#X?}", dst, dst+data.len());
+            continue
+        }
+
+        let path: String = format!("segments/{:X}.dump", dst).to_string();
+        std::fs::write(path, data).unwrap()
+    }
+
+    // Dump data for memset tripples
+    for tripple in &bootloader.memset_tripples {
+        let dst  = tripple.0;
+        let val  = tripple.1 as u8;
+        let size = tripple.2;
+
+        if size == 0 {
+            continue;
+        }
+
+        // Verify that this section is not going to be overwriting a protected segment
+        if bootloader.is_protected(dst, dst+size) {
+            println!("[!] Memset: Found protected at: {:#X?} : {:#X?}", dst, dst+data.len());
+            continue
+        }
+
+        let data = vec![val; size];
+        let path: String = format!("segments/{:X}.dump", dst).to_string();
+        std::fs::write(path, data).unwrap()
+    }
+
+    // Dump data for memcpy tripples
+    for tripple in &bootloader.memcpy_tripples {
+        let dst  = tripple.0;
+        let src  = tripple.1;
+        let size = tripple.2;
+
+        if size == 0 {
+            continue;
+        }
+
+        let data = lzss_uncompress(&firmware.data[src
+                                   .checked_sub(firmware.header.load_addr).unwrap()..
+                                   (src - firmware.header.load_addr)
+                                   .checked_add(size).unwrap()]);
+
+        // Verify that this section is not going to be overwriting a protected segment
+        if bootloader.is_protected(dst, dst+size) {
+            println!("[!] Memcpy: Found protected at: {:#X?} : {:#X?}", dst, dst+data.len());
+            continue
+        }
+
+        let data = &firmware.data[src.checked_sub(firmware.header.load_addr).unwrap()..
+            (src - firmware.header.load_addr).checked_add(size).unwrap()];
+
+        let path: String = format!("segments/{:X}.dump", dst).to_string();
+        std::fs::write(path, data).unwrap()
+    }
+
+    /*
     let _ = std::fs::remove_dir_all("segments");
     std::fs::create_dir_all("segments").unwrap();
     for segment in &firmware.segments {
@@ -152,8 +385,7 @@ fn main() {
             continue
         }
 
-        if segment.start < firmware.header.load_addr {
-            println!("Skipping {} because start < load-address", segment.name);
+        if segment.start < firmware.header.load_addr { println!("Skipping {} because start < load-address", segment.name);
             continue
         }
 
@@ -172,7 +404,6 @@ fn main() {
                                    .checked_add(segment.size).unwrap()]);
         std::fs::write(path, data).unwrap()
     }
-
-    println!("Map binary base to {:0X}, with start address at {:0X}.", 
-             firmware.header.load_addr, firmware.header.exec_addr);
+    */
+    println!("Entrypoint: {:#X?}", bootloader.header.entry_point);
 }
