@@ -5,6 +5,9 @@ use unpacker::{
     srecord::{parse_srecords, print_binary_record}
 };
 
+/// Start of table that is used to retrieve section details for decompression
+const TABLE_START: usize = 0x68690;
+
 /// Firmware Header
 #[derive(Debug, Default)]
 struct Header {
@@ -89,7 +92,7 @@ impl Firmware {
     /// Parse out segment table from firmware
     pub fn parse_segments(&mut self) {
         // Start of the segment-table in memory
-        let mut next = 0x68690;
+        let mut next = TABLE_START;
 
         while next != 0x0 {
             let mut name = Vec::new();
@@ -135,11 +138,11 @@ fn main() {
     firmware.parse_data(&data);
     firmware.parse_segments();
 
-    std::fs::write("./firmware", firmware.data).unwrap();
+    std::fs::write("./firmware", &firmware.data).unwrap();
 
     // TODO idk if this should be done on the original firmware, or the firmware with the 3 
     // initial data sections appended to it
-    let fw_3_data = std::fs::read("./firmware_with_3_data").unwrap();
+    // let fw_3_data = std::fs::read("./firmware_with_3_data").unwrap();
 
     let _ = std::fs::remove_dir_all("segments");
     std::fs::create_dir_all("segments").unwrap();
@@ -155,7 +158,7 @@ fn main() {
         }
 
         if segment.start.checked_sub(firmware.header.load_addr).unwrap()
-                .checked_add(segment.size).unwrap() > fw_3_data.len() {
+                .checked_add(segment.size).unwrap() > firmware.data.len() {
             println!("Skipping {} because start > data length", segment.name);
             continue
         }
@@ -163,7 +166,8 @@ fn main() {
         println!("Applying lzss decompression to {} segment", segment.name);
 
         let path: String = format!("segments/{}", segment.name).to_string().replace(".", "_");
-        let data = lzss_uncompress(&fw_3_data[segment.start.checked_sub(firmware.header.load_addr)
+        let data = lzss_uncompress(&firmware.data[segment.start
+                                   .checked_sub(firmware.header.load_addr)
                                    .unwrap()..(segment.start - firmware.header.load_addr)
                                    .checked_add(segment.size).unwrap()]);
         std::fs::write(path, data).unwrap()
