@@ -127,6 +127,64 @@ impl Firmware {
                 });
         }
     }
+
+    pub fn dump_hardcoded(&self) {
+        // Hardcoded memcpy
+        { 
+            let dst: usize = 0x60;
+            let src: usize = 0x26710000;
+            let len: usize = 0x7b0;
+
+            let data = &self.data[src.checked_sub(self.header.load_addr).unwrap()..
+                (src - self.header.load_addr).checked_add(len).unwrap()];
+
+            let path: String = format!("segments/{:X}.dump", dst).to_string();
+            std::fs::write(path, data).unwrap()
+        }
+
+        // Hardcoded uncompress
+        {
+            let tripples: [(usize, usize, usize);3] = [
+                (0xa007cd60, 0x26724b18, 0x3cfa),
+                (0x2009fd8c, 0x26722398, 0x277f),
+                (0x200890c0, 0x267107b0, 0x11be7),
+            ];
+            for tripple in tripples {
+                let dst  = tripple.0;
+                let src  = tripple.1;
+                let size = tripple.2;
+
+                let data = lzss_uncompress(&self.data[src
+                                           .checked_sub(self.header.load_addr).unwrap()..
+                                           (src - self.header.load_addr)
+                                           .checked_add(size).unwrap()]);
+
+                let path: String = format!("segments/{:X}.dump", dst).to_string();
+                std::fs::write(path, data).unwrap()
+            }
+        }
+
+        // Hardcoded memsets
+        {
+            let tripples: [(usize, u8, usize);4] = [
+                (0xa007cd20, 0, 0x40),
+                (0xa0081160, 0, 0x7f58),
+                (0x600788a0, 0, 0x4464),
+                (0x60000000, 0, 0xc7c),
+            ];
+
+            // Dump data for memset tripples
+            for tripple in &tripples {
+                let dst  = tripple.0;
+                let val  = tripple.1;
+                let size = tripple.2;
+
+                let data = vec![val; size];
+                let path: String = format!("segments/{:X}.dump", dst).to_string();
+                std::fs::write(path, data).unwrap()
+            }
+        }
+    }
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -289,6 +347,10 @@ fn main() {
     firmware.parse_data(&data);
     firmware.parse_segments();
 
+    let _ = std::fs::remove_dir_all("segments");
+    std::fs::create_dir_all("segments").unwrap();
+    firmware.dump_hardcoded();
+
     //println!("HEADER: {:#X?}", firmware.header);
     std::fs::write("./firmware", &firmware.data).unwrap();
 
@@ -299,8 +361,6 @@ fn main() {
 
     //println!("PROTECTED: {:#X?}", bootloader.protected_ranges);
 
-    let _ = std::fs::remove_dir_all("segments");
-    std::fs::create_dir_all("segments").unwrap();
 
     // Uncompress all tripples related to sections meant to be uncompressed
     for tripple in &bootloader.uncompress_tripples {
@@ -358,23 +418,26 @@ fn main() {
             continue;
         }
 
-        let data = lzss_uncompress(&firmware.data[src
-                                   .checked_sub(firmware.header.load_addr).unwrap()..
-                                   (src - firmware.header.load_addr)
-                                   .checked_add(size).unwrap()]);
+        let data = &firmware.data[src.checked_sub(firmware.header.load_addr).unwrap()..
+            (src - firmware.header.load_addr).checked_add(size).unwrap()];
 
         // Verify that this section is not going to be overwriting a protected segment
         if bootloader.is_protected(dst, dst+size) {
             println!("[!] Memcpy: Found protected at: {:#X?} : {:#X?}", dst, dst+data.len());
             continue
         }
-
-        let data = &firmware.data[src.checked_sub(firmware.header.load_addr).unwrap()..
-            (src - firmware.header.load_addr).checked_add(size).unwrap()];
+        // Verify that this section is not going to be overwriting a protected segment
+        if bootloader.is_protected(dst, dst+size) {
+            println!("[!] Memcpy: Found protected at: {:#X?} : {:#X?}", dst, dst+data.len());
+            continue
+        }
 
         let path: String = format!("segments/{:X}.dump", dst).to_string();
         std::fs::write(path, data).unwrap()
     }
+
+    println!("{:#X?}", bootloader);
+
 
     /*
     let _ = std::fs::remove_dir_all("segments");
@@ -405,5 +468,7 @@ fn main() {
         std::fs::write(path, data).unwrap()
     }
     */
+    println!("Firmware Load address: {:#X?}", firmware.header.load_addr);
     println!("Entrypoint: {:#X?}", bootloader.header.entry_point);
+
 }
